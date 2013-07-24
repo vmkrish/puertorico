@@ -2,6 +2,7 @@ from __future__ import print_function
 from __future__ import division
 
 from random import shuffle
+from collections import Counter
 
 """
 static methods: annotate with @staticmethod or say
@@ -14,9 +15,16 @@ Could have a "workable" class with n_colonists_working
 """
 
 class Tile(object):
+    """
+    This class represents a tile, such as a Corn square or a Small
+    Indigo Plant building.
+    """
     n_tiles = 0
 
-class Resource(Tile):
+class Plantation(Tile):
+    pass
+
+class Resource(Plantation):
     value = 0
 
 class Phase(object):
@@ -46,7 +54,6 @@ class Building(Tile):
     cost = 0
     colonists = 1
     n_tiles = 2
-
     #additional bldg specific fields
     resources = dict()
     for resource in Resource.__subclasses__():
@@ -74,7 +81,7 @@ class Tobacco(Resource):
 class Coffee(Resource):
     value = 4
     n_tiles = 8
-class Quarry(Tile):
+class Quarry(Plantation):
     """
     need to fix this:
     want Plantation
@@ -185,9 +192,10 @@ class Players(object):
         self.players = [Player() for i in range(0, n)]
 class Buildings(object):
     def __init__(self):
-        self.buildings = {building : building.n_tiles for building in
+        buildings_map = {building : building.n_tiles for building in
                           [bldg for bldg_t in Building.__subclasses__()
                            for bldg in bldg_t.__subclasses__()]}
+        self.buildings = Counter(buildings_map)
     def buy(self, player, building):
         pass
 class Resources(object):
@@ -197,10 +205,11 @@ class Resources(object):
                      for resource in [resource_t]*resource_t.n_tiles]
         shuffle(self.pile)
         self.new_stack()
-        quarries = [Quarry() for i in range(0, 8)]
+        self.quarries = Counter([Quarry() for i in range(0, 8)])
     def new_stack(self):
         #need to check that there's enough resources left
-        self.stack = [self.pile.pop() for i in range(0, self.n+1)]
+        stack_list = [self.pile.pop() for i in range(0, self.n+1)]
+        self.stack = Counter(stack_list)
     def take(self, resource):
         pass
 class Phases(object):
@@ -219,4 +228,5 @@ class Game(object):
         self.phases = Phases(n)
         self.buildings = Buildings()
         self.ships = Ships(n)
-    
+        
+        self.govenor = 0

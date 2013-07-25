@@ -14,86 +14,25 @@ f = staticmethod(f)
 Could have a "workable" class with n_colonists_working
 """
 
-class Tile(object):
-    """
-    This class represents a tile, such as a Corn square or a Small
-    Indigo Plant building.
-    """
-    n_tiles = 0
-
-class Plantation(Tile):
-    pass
-
-class Resource(Plantation):
-    value = 0
-
-class Phase(object):
+class Effect(object):
+    game = None
+    phase = None            #override
+    @staticmethod
+    def register(_game):
+        Effect.game = _game
+    @staticmethod
+    def effect(player):     #override
+        pass
+class Phase(Effect):
     def __init__(self):
         pass
     @staticmethod
     def priviledge(player):
         print(player)
-
-class Player(object):
-    n_colonists = 0
-    buildings = list()
-    plantations = list()
-    n_vp = 0
-    def __repr__(self):
-        return str(
-            ("player",
-             self.n_colonists,
-             self.n_vp)
-            )
-            
-
-class Building(Tile):
-    #base fields
-    vp = 0
-    size = 1
-    cost = 0
-    colonists = 1
-    n_tiles = 2
-    #additional bldg specific fields
-    resources = dict()
-    for resource in Resource.__subclasses__():
-        resources[resource] = 0#don't want to get KeyErrors, so just init all to 0
-
-class Ship(object):
-    def __init__(self, n):
-        self.size = n
-
-class TradingHouse(object):
-    resources = {resource : 0 for resource in Resource.__subclasses__()}
-
-class Corn(Resource):
-    value = 0
-    n_tiles = 10
-class Indigo(Resource):
-    value = 1
-    n_tiles = 12
-class Sugar(Resource):
-    value = 2
-    n_tiles = 11
-class Tobacco(Resource):
-    value = 3
-    n_tiles = 9
-class Coffee(Resource):
-    value = 4
-    n_tiles = 8
-class Quarry(Plantation):
-    """
-    need to fix this:
-    want Plantation
-            Resource
-                Corn, Indigo, Sugar, Tobacco, Coffee
-            Quarry
-    """
-    n_tiles = 8
+    def __str__(self):
+        return self.__class__.__name__
 
 class Mayor(Phase):
-    def __repr__(self):
-        return "Mayor"
     pass
 class Settler(Phase):
     pass
@@ -107,6 +46,67 @@ class Builder(Phase):
     pass
 class Prospector(Phase):
     pass
+
+class Tile(Effect, object):
+    """
+    This class represents a tile, such as a Corn square or a Small
+    Indigo Plant building.
+    """
+    n_tiles = 0             # number of starting tiles
+    colonists = 1           # max colonists
+
+"""
+Resources:
+    represents both the tiles and the resource barrels
+"""
+class Plantation(Tile):
+    pass
+class Resource(Plantation):
+    value = 0               # trading value
+    n_goods = 0             # number of starting barrels
+
+class Corn(Resource):
+    value = 0
+    n_tiles = 10
+    n_goods = 10
+class Indigo(Resource):
+    value = 1
+    n_tiles = 12
+    n_goods = 11
+class Sugar(Resource):
+    value = 2
+    n_tiles = 11
+    n_goods = 11
+class Tobacco(Resource):
+    value = 3
+    n_tiles = 9
+    n_goods = 9
+class Coffee(Resource):
+    value = 4
+    n_tiles = 8
+    n_goods = 9
+class Quarry(Plantation):
+    n_tiles = 8            
+
+"""
+Buildings:
+    Stuff related to buildings
+"""
+class Building(Tile):
+    vp = 0
+    size = 1
+    cost = 0
+    colonists = 1
+    n_tiles = 2
+    phase = Phase       #phase(s?) which the building impacts
+    ##additional bldg specific fields
+    #resources = dict()
+    #for resource in Resource.__subclasses__():
+    #    resources[resource] = 0#don't want to get KeyErrors, so just init all to 0
+    def register(_game):
+        game = _game
+    def effect(player): #effect the building has during its phase
+        pass
 
 class Building1(Building):
     vp = 1
@@ -123,49 +123,67 @@ class Building4(Building):
 class SmallIndigoPlant(Building1):
     n_tiles = 4
     cost = 1
+    phase = Craftsman
 class SmallSugarMill(Building1):
     n_tiles = 3
     cost = 2
+    phase = Craftsman
 class SmallMarket(Building1):
     cost = 1
+    phase = Trader
 class Hacienda(Building1):
     cost = 2
+    phase = Settler
 class ConstructionHut(Building1):
     cost = 2
+    phase = Settler
 class SmallWarehouse(Building1):
     cost = 3
+    phase = Captain
 #Row 2    
 class LargeIndigoPlant(Building2):
     n_tiles = 3
     cost = 3
     colonists = 3
+    phase = Craftsman
 class LargeSugarMill(Building2):
     n_tiles = 3
     cost = 4
     colonists = 3
+    phase = Craftsman
 class Hospice(Building2):
     cost = 4
+    phase = Settler
 class Office(Building2):
     cost = 5
+    phase = Trader
 class LargeMarket(Building2):
     cost = 5
+    phase = Trader
 class LargeWarehouse(Building2):
     cost = 6
+    phase = Captain
 #Row 3
 class TobaccoStorage(Building3):
     n_tiles = 3
     cost = 5
+    phase = Craftsman
 class CoffeeRoaster(Building3):
     n_tiles = 3
     cost = 6
+    phase = Craftsman
 class Factory(Building3):
     cost = 7
+    phase = Craftsman
 class University(Building3):
     cost = 8
+    phase = Builder
 class Harbor(Building3):
     cost = 8
+    phase = Captain
 class Wharf(Building3):
     cost = 9
+    phase = Captain
 #Row 4    
 class GuildHall(Building4):
     pass
@@ -186,6 +204,37 @@ class BuildingList(object):
         return sum(building.cost for building in self.buildings)
     def get_size(self):
         return sum(building.size for building in self.buildings)
+
+"""
+Shipping stuff
+"""
+class Ship(object):
+    def __init__(self, n):
+        self.size = n
+
+class TradingHouse(object):
+    resources = {resource : 0 for resource in Resource.__subclasses__()}
+
+
+
+class Player(object):
+    n_colonists = 0
+    unworked_buildings = list()
+    worked_buildings = list()
+    plantations = Counter()
+    n_vp = 0
+    def __str__(self):
+        return str(
+            ("player",
+             self.n_colonists,
+             self.n_vp)
+            )
+    def acquire(self, obj):
+        pass
+    def acquireBuilding(self, building):
+        pass
+    def acquirePlantation(self, plantation):
+        pass
 
 class Players(object):
     def __init__(self, n):
@@ -228,5 +277,6 @@ class Game(object):
         self.phases = Phases(n)
         self.buildings = Buildings()
         self.ships = Ships(n)
-        
         self.govenor = 0
+
+        Effect.register(self)

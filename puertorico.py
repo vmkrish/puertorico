@@ -47,7 +47,7 @@ class Builder(Phase):
 class Prospector(Phase):
     pass
 
-class Tile(Effect, object):
+class Tile(Effect):
     """
     This class represents a tile, such as a Corn square or a Small
     Indigo Plant building.
@@ -108,6 +108,12 @@ class Building(Tile):
     def effect(player): #effect the building has during its phase
         pass
 
+# Building types:
+class ProductionBuilding(object):
+    pass
+# Everything not a production building is a beige building
+
+# Building sizes:
 class Building1(Building):
     vp = 1
 class Building2(Building):
@@ -120,11 +126,11 @@ class Building4(Building):
     cost = 10
     n_tiles = 1
 #Row 1
-class SmallIndigoPlant(Building1):
+class SmallIndigoPlant(Building1, ProductionBuilding):
     n_tiles = 4
     cost = 1
     phase = Craftsman
-class SmallSugarMill(Building1):
+class SmallSugarMill(Building1, ProductionBuilding):
     n_tiles = 3
     cost = 2
     phase = Craftsman
@@ -141,12 +147,12 @@ class SmallWarehouse(Building1):
     cost = 3
     phase = Captain
 #Row 2    
-class LargeIndigoPlant(Building2):
+class LargeIndigoPlant(Building2, ProductionBuilding):
     n_tiles = 3
     cost = 3
     colonists = 3
     phase = Craftsman
-class LargeSugarMill(Building2):
+class LargeSugarMill(Building2, ProductionBuilding):
     n_tiles = 3
     cost = 4
     colonists = 3
@@ -164,11 +170,11 @@ class LargeWarehouse(Building2):
     cost = 6
     phase = Captain
 #Row 3
-class TobaccoStorage(Building3):
+class TobaccoStorage(Building3, ProductionBuilding):
     n_tiles = 3
     cost = 5
     phase = Craftsman
-class CoffeeRoaster(Building3):
+class CoffeeRoaster(Building3, ProductionBuilding):
     n_tiles = 3
     cost = 6
     phase = Craftsman
@@ -280,3 +286,49 @@ class Game(object):
         self.govenor = 0
 
         Effect.register(self)
+
+def eval_completed(game):
+    scores = []
+    for player in games.players.players:
+        score = player.n_vp
+        # add in building values
+        n_small_production = 0
+        n_large_production = 0
+        n_beige = 0
+        has_guild_hall = False
+        has_city_hall = False
+        for building in player.unworked_buildings:
+            score += building.vp
+            if isinstance(building, ProductionBuilding):
+                if isinstance(building, Building1):
+                    n_small_production += 1
+                else:
+                    n_large_production += 1
+            else:
+                n_beige += 1
+        for building in player.worked_buildings:
+            score += building.vp
+            if isinstance(building, ProductionBuilding):
+                if isinstance(building, Building1):
+                    n_small_production += 1
+                else:
+                    n_large_production += 1
+            else:
+                n_beige += 1
+                if isinstance(building, GuildHall):
+                    has_guild_hall = True
+                elif isinstance(building, Residence):
+                    # TODO: increase score here based on number of filled island squares
+                    pass
+                elif isinstance(building, Fortress):
+                    score += int(player.n_colonists / 3)
+                elif isinstance(building, CustomsHouse):
+                    score += int(player.n_vp / 4)
+                elif isinstance(building, CityHall):
+                    has_city_hall = True
+        if has_guild_hall:
+            score += n_small_production + 2 * n_large_production
+        if has_city_hall:
+            score += n_beige
+        scores.push(score)
+    return scores
